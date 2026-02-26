@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Desafio 1 — Sistema de Votação de Filme</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Nunito:wght@400;600;700;800;900&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0f0e17;
+  --surface:#1a1926;
+  --surface2:#232136;
+  --accent:#ff6e6e;
+  --accent2:#ffd166;
+  --accent3:#06d6a0;
+  --accent4:#118ab2;
+  --accent5:#a78bfa;
+  --text:#fffffe;
+  --text-dim:#94a1b2;
+  --code-bg:#1e1d2f;
+  --glow:rgba(255,110,110,0.15);
+}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{
+  font-family:'Nunito',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.7;
+  overflow-x:hidden;
+}
+
+/* Animated background */
+.bg-grid{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);
+  background-size:60px 60px;
+}
+.bg-orbs{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:0;overflow:hidden;
+}
+.bg-orbs .orb{
+  position:absolute;border-radius:50%;filter:blur(80px);opacity:0.12;
+  animation:orbFloat 20s ease-in-out infinite;
+}
+.bg-orbs .orb:nth-child(1){width:500px;height:500px;background:var(--accent);top:-100px;left:-100px;animation-delay:0s}
+.bg-orbs .orb:nth-child(2){width:400px;height:400px;background:var(--accent4);bottom:-100px;right:-100px;animation-delay:-7s}
+.bg-orbs .orb:nth-child(3){width:350px;height:350px;background:var(--accent5);top:50%;left:50%;animation-delay:-14s}
+@keyframes orbFloat{
+  0%,100%{transform:translate(0,0) scale(1)}
+  33%{transform:translate(50px,-30px) scale(1.1)}
+  66%{transform:translate(-30px,50px) scale(0.9)}
+}
+
+.container{
+  max-width:900px;margin:0 auto;padding:20px;
+  position:relative;z-index:1;
+}
+
+/* Hero */
+.hero{
+  text-align:center;padding:80px 20px 60px;
+  position:relative;
+}
+.hero-badge{
+  display:inline-block;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:var(--bg);
+  font-weight:800;font-size:0.85rem;
+  padding:6px 20px;border-radius:50px;
+  text-transform:uppercase;letter-spacing:2px;
+  margin-bottom:24px;
+  animation:fadeSlideDown 0.8s ease both;
+}
+.hero h1{
+  font-size:clamp(2.5rem,6vw,4rem);
+  font-weight:900;
+  background:linear-gradient(135deg,var(--text),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  line-height:1.15;margin-bottom:16px;
+  animation:fadeSlideDown 0.8s ease 0.15s both;
+}
+.hero .subtitle{
+  font-size:1.2rem;color:var(--text-dim);max-width:600px;margin:0 auto;
+  animation:fadeSlideDown 0.8s ease 0.3s both;
+}
+.hero-emoji{
+  font-size:4rem;display:block;margin-bottom:16px;
+  animation:bounce 2s ease-in-out infinite;
+}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@keyframes fadeSlideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* Progress bar */
+.progress-track{
+  position:fixed;top:0;left:0;width:100%;height:4px;z-index:100;
+  background:rgba(255,255,255,0.05);
+}
+.progress-bar{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));
+  transition:width 0.3s;border-radius:0 2px 2px 0;
+  box-shadow:0 0 20px var(--accent);
+}
+
+/* Nav dots */
+.nav-dots{
+  position:fixed;right:24px;top:50%;transform:translateY(-50%);
+  z-index:50;display:flex;flex-direction:column;gap:12px;
+}
+.nav-dot{
+  width:12px;height:12px;border-radius:50%;
+  border:2px solid var(--text-dim);background:transparent;
+  cursor:pointer;transition:all 0.3s;position:relative;
+}
+.nav-dot.active{
+  border-color:var(--accent);background:var(--accent);
+  box-shadow:0 0 12px var(--accent);
+}
+.nav-dot:hover::after{
+  content:attr(data-label);
+  position:absolute;right:24px;top:50%;transform:translateY(-50%);
+  background:var(--surface2);color:var(--text);
+  padding:4px 12px;border-radius:6px;
+  font-size:0.75rem;white-space:nowrap;
+  font-family:'Nunito',sans-serif;
+}
+
+/* Sections */
+.step-section{
+  margin:40px 0;
+  opacity:0;transform:translateY(40px);
+  transition:opacity 0.7s ease,transform 0.7s ease;
+}
+.step-section.visible{opacity:1;transform:translateY(0)}
+
+.step-header{
+  display:flex;align-items:center;gap:16px;margin-bottom:24px;
+}
+.step-number{
+  width:56px;height:56px;border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:1.5rem;color:var(--bg);
+  flex-shrink:0;position:relative;
+}
+.step-number::after{
+  content:'';position:absolute;inset:-3px;border-radius:19px;
+  background:inherit;opacity:0.3;z-index:-1;
+}
+.step-number.s1{background:var(--accent)}
+.step-number.s2{background:var(--accent2)}
+.step-number.s3{background:var(--accent3)}
+.step-number.s4{background:var(--accent4)}
+.step-number.s5{background:var(--accent5)}
+.step-number.s6{background:var(--accent)}
+.step-title{font-size:1.6rem;font-weight:800}
+
+/* Cards */
+.card{
+  background:var(--surface);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:20px;padding:32px;
+  margin-bottom:24px;
+  position:relative;overflow:hidden;
+  transition:border-color 0.3s;
+}
+.card:hover{border-color:rgba(255,255,255,0.12)}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+  opacity:0;transition:opacity 0.3s;
+}
+.card:hover::before{opacity:1}
+
+/* Concept box */
+.concept{
+  background:var(--surface2);border-radius:16px;
+  padding:24px;margin:16px 0;
+  border-left:4px solid var(--accent2);
+}
+.concept-title{
+  font-family:'Caveat',cursive;font-size:1.4rem;
+  color:var(--accent2);margin-bottom:8px;
+}
+.concept p{color:var(--text-dim);font-size:0.95rem}
+
+/* Code blocks */
+.code-block{
+  background:var(--code-bg);border-radius:14px;
+  margin:16px 0;overflow:hidden;
+  border:1px solid rgba(255,255,255,0.06);
+  position:relative;
+}
+.code-header{
+  background:rgba(255,255,255,0.04);
+  padding:10px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.code-header .dots{display:flex;gap:6px}
+.code-header .dot{width:10px;height:10px;border-radius:50%}
+.code-header .dot:nth-child(1){background:#ff5f57}
+.code-header .dot:nth-child(2){background:#febc2e}
+.code-header .dot:nth-child(3){background:#28c840}
+.code-header .filename{color:var(--text-dim);font-size:0.8rem;font-family:'JetBrains Mono',monospace}
+pre{
+  padding:20px;margin:0;overflow-x:auto;
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.85rem;line-height:1.8;
+  color:#e0def4;
+}
+.code-block .line-numbers{
+  position:absolute;left:0;top:44px;
+  padding:20px 12px 20px 16px;
+  color:rgba(255,255,255,0.15);
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.85rem;line-height:1.8;
+  text-align:right;user-select:none;
+  border-right:1px solid rgba(255,255,255,0.04);
+}
+.code-block.with-lines pre{padding-left:56px}
+
+/* Syntax highlighting */
+.kw{color:#c4a7e7} /* keyword */
+.fn{color:#9ccfd8} /* function */
+.st{color:#f6c177} /* string */
+.cm{color:#6e6a86;font-style:italic} /* comment */
+.nb{color:#eb6f92} /* builtin */
+.op{color:#e0def4} /* operator */
+.num{color:#ea9a97} /* number */
+.var{color:#e0def4} /* variable */
+.bool{color:#3e8fb0} /* bool */
+
+/* Highlight effect */
+.highlight-line{
+  display:inline-block;width:100%;
+  padding:0 4px;margin:0 -4px;border-radius:4px;
+  transition:background 0.3s;
+}
+.highlight-line:hover{background:rgba(255,255,255,0.04)}
+.highlight-line.active{
+  background:rgba(255,110,110,0.1);
+  border-left:3px solid var(--accent);
+  padding-left:8px;
+}
+
+/* Flow arrows */
+.flow-container{
+  display:flex;flex-direction:column;align-items:center;
+  gap:0;margin:24px 0;
+}
+.flow-box{
+  background:var(--surface2);border:2px solid rgba(255,255,255,0.08);
+  border-radius:14px;padding:16px 28px;
+  text-align:center;font-weight:700;font-size:0.95rem;
+  position:relative;min-width:220px;
+  transition:all 0.3s;cursor:default;
+}
+.flow-box:hover{transform:scale(1.03);border-color:rgba(255,255,255,0.2)}
+.flow-box.start{border-color:var(--accent3);background:rgba(6,214,160,0.08)}
+.flow-box.process{border-color:var(--accent4);background:rgba(17,138,178,0.08)}
+.flow-box.decision{
+  border-color:var(--accent2);background:rgba(255,209,102,0.08);
+  border-radius:14px;transform:rotate(0deg);
+}
+.flow-box.decision::before{
+  content:'⟡';position:absolute;top:-8px;right:-8px;
+  font-size:1.2rem;color:var(--accent2);
+}
+.flow-box.end{border-color:var(--accent);background:rgba(255,110,110,0.08)}
+.flow-box.action{border-color:var(--accent5);background:rgba(167,139,250,0.08)}
+.flow-box .label{font-size:0.7rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+
+.flow-arrow{
+  width:2px;height:36px;position:relative;
+  display:flex;align-items:center;justify-content:center;
+}
+.flow-arrow::before{
+  content:'';position:absolute;width:2px;height:100%;
+  background:linear-gradient(to bottom,var(--text-dim),transparent);
+}
+.flow-arrow::after{
+  content:'▼';position:absolute;bottom:-8px;
+  color:var(--text-dim);font-size:0.7rem;
+}
+.flow-arrow .flow-label{
+  position:absolute;left:24px;top:50%;transform:translateY(-50%);
+  font-size:0.75rem;color:var(--accent2);font-weight:700;
+  white-space:nowrap;font-family:'Caveat',cursive;font-size:0.95rem;
+}
+.flow-arrow .flow-label.right{left:auto;right:24px}
+
+/* Animated demo */
+.demo-terminal{
+  background:#0d0c1a;border-radius:16px;overflow:hidden;
+  border:1px solid rgba(255,255,255,0.08);margin:20px 0;
+}
+.demo-terminal .term-header{
+  background:rgba(255,255,255,0.04);padding:12px 16px;
+  display:flex;align-items:center;gap:8px;
+}
+.demo-terminal .term-header .dots{display:flex;gap:6px}
+.demo-terminal .term-header .dot{width:10px;height:10px;border-radius:50%}
+.demo-terminal .term-header .dot:nth-child(1){background:#ff5f57}
+.demo-terminal .term-header .dot:nth-child(2){background:#febc2e}
+.demo-terminal .term-header .dot:nth-child(3){background:#28c840}
+.demo-terminal .term-header span{color:var(--text-dim);font-size:0.8rem;font-family:'JetBrains Mono',monospace;margin-left:8px}
+.demo-body{
+  padding:20px;font-family:'JetBrains Mono',monospace;
+  font-size:0.85rem;min-height:280px;
+  color:#c4b5fd;line-height:1.9;
+}
+.demo-line{opacity:0;transform:translateX(-10px);transition:all 0.4s ease}
+.demo-line.show{opacity:1;transform:translateX(0)}
+.demo-line .prompt{color:var(--accent3)}
+.demo-line .user-input{color:var(--accent2)}
+.demo-line .output{color:#e0def4}
+.demo-line .success{color:var(--accent3)}
+.demo-line .result{color:var(--accent);font-weight:700}
+
+.btn-demo{
+  display:inline-flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,var(--accent),#ff4757);
+  color:white;border:none;padding:12px 28px;
+  border-radius:12px;font-size:0.95rem;font-weight:700;
+  cursor:pointer;font-family:'Nunito',sans-serif;
+  transition:all 0.3s;margin:12px 0;
+}
+.btn-demo:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(255,110,110,0.3)}
+.btn-demo:active{transform:translateY(0)}
+
+/* Analogy boxes */
+.analogy{
+  background:linear-gradient(135deg,rgba(167,139,250,0.08),rgba(17,138,178,0.08));
+  border:1px solid rgba(167,139,250,0.2);
+  border-radius:16px;padding:24px;margin:16px 0;
+  position:relative;
+}
+.analogy::before{
+  content:'💡';font-size:1.6rem;
+  position:absolute;top:-14px;left:20px;
+}
+.analogy-title{
+  font-family:'Caveat',cursive;font-size:1.3rem;
+  color:var(--accent5);margin-bottom:8px;
+}
+
+/* Tip callout */
+.tip{
+  background:rgba(6,214,160,0.06);
+  border:1px solid rgba(6,214,160,0.2);
+  border-radius:14px;padding:20px 24px;margin:16px 0;
+  display:flex;gap:12px;align-items:flex-start;
+}
+.tip-icon{font-size:1.4rem;flex-shrink:0;margin-top:2px}
+.tip-content{color:var(--text-dim);font-size:0.92rem}
+.tip-content strong{color:var(--accent3)}
+
+/* Warning */
+.warning{
+  background:rgba(255,209,102,0.06);
+  border:1px solid rgba(255,209,102,0.2);
+  border-radius:14px;padding:20px 24px;margin:16px 0;
+  display:flex;gap:12px;align-items:flex-start;
+}
+.warning-icon{font-size:1.4rem;flex-shrink:0;margin-top:2px}
+
+/* Interactive toggler */
+.toggler{
+  background:var(--surface);border-radius:14px;
+  overflow:hidden;margin:16px 0;
+  border:1px solid rgba(255,255,255,0.06);
+}
+.toggler-header{
+  padding:16px 24px;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;
+  transition:background 0.3s;font-weight:700;
+}
+.toggler-header:hover{background:rgba(255,255,255,0.03)}
+.toggler-arrow{transition:transform 0.3s;font-size:1.2rem}
+.toggler-header.open .toggler-arrow{transform:rotate(180deg)}
+.toggler-body{
+  max-height:0;overflow:hidden;transition:max-height 0.5s ease;
+  padding:0 24px;
+}
+.toggler-body.open{max-height:2000px;padding:0 24px 24px}
+
+/* Complete code section */
+.complete-code{
+  position:relative;
+}
+.complete-code .copy-btn{
+  position:absolute;top:52px;right:12px;
+  background:rgba(255,255,255,0.08);border:none;
+  color:var(--text-dim);padding:6px 14px;border-radius:8px;
+  font-size:0.8rem;cursor:pointer;font-family:'JetBrains Mono',monospace;
+  transition:all 0.3s;z-index:2;
+}
+.complete-code .copy-btn:hover{background:rgba(255,255,255,0.15);color:var(--text)}
+
+/* Final section */
+.final-section{
+  text-align:center;padding:60px 20px;
+}
+.final-section h2{
+  font-size:2rem;font-weight:900;margin-bottom:16px;
+  background:linear-gradient(135deg,var(--accent3),var(--accent4));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+
+/* Visualization: list animation */
+.list-viz{
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  margin:16px 0;min-height:50px;
+}
+.list-viz .bracket{
+  font-family:'JetBrains Mono',monospace;
+  font-size:1.8rem;color:var(--text-dim);font-weight:700;
+}
+.list-viz .item{
+  background:var(--surface2);border:2px solid var(--accent4);
+  border-radius:10px;padding:6px 16px;
+  font-family:'JetBrains Mono',monospace;font-weight:700;
+  font-size:0.95rem;
+  animation:popIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275) both;
+}
+.list-viz .item.film1{border-color:var(--accent);color:var(--accent)}
+.list-viz .item.film2{border-color:var(--accent2);color:var(--accent2)}
+.list-viz .item.film3{border-color:var(--accent3);color:var(--accent3)}
+.list-viz .comma{color:var(--text-dim);font-family:'JetBrains Mono',monospace}
+@keyframes popIn{from{opacity:0;transform:scale(0.5)}to{opacity:1;transform:scale(1)}}
+
+/* Vote counter animation */
+.vote-counter{
+  display:flex;gap:20px;justify-content:center;
+  flex-wrap:wrap;margin:20px 0;
+}
+.vote-bar{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  min-width:120px;
+}
+.vote-bar-label{font-weight:800;font-size:0.95rem}
+.vote-bar-track{
+  width:100%;height:40px;background:var(--surface2);
+  border-radius:10px;overflow:hidden;position:relative;
+}
+.vote-bar-fill{
+  height:100%;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:0.9rem;color:var(--bg);
+  transition:width 1s cubic-bezier(0.22,1,0.36,1);
+  min-width:0;
+}
+.vote-bar-fill.f1{background:linear-gradient(90deg,var(--accent),#ff4757)}
+.vote-bar-fill.f2{background:linear-gradient(90deg,var(--accent2),#ffb347)}
+.vote-bar-fill.f3{background:linear-gradient(90deg,var(--accent3),#00b894)}
+
+/* Responsive */
+@media(max-width:768px){
+  .container{padding:16px}
+  .card{padding:20px}
+  .nav-dots{display:none}
+  .hero{padding:50px 16px 40px}
+  .flow-box{min-width:180px;padding:12px 18px;font-size:0.85rem}
+  pre{font-size:0.78rem}
+}
+
+/* Scroll animations */
+.reveal{opacity:0;transform:translateY(30px);transition:all 0.6s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* Connector lines between sections */
+.section-connector{
+  display:flex;justify-content:center;margin:10px 0 20px;
+}
+.section-connector .line{
+  width:2px;height:50px;
+  background:linear-gradient(to bottom,rgba(255,255,255,0.1),transparent);
+}
+
+/* Pulsing badge */
+.pulse-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,110,110,0.1);
+  border:1px solid rgba(255,110,110,0.3);
+  padding:4px 14px;border-radius:50px;
+  font-size:0.8rem;color:var(--accent);font-weight:700;
+}
+.pulse-badge .dot{
+  width:6px;height:6px;border-radius:50%;background:var(--accent);
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.5)}}
+
+/* Stagger children */
+.stagger > *{
+  opacity:0;transform:translateY(20px);
+  transition:all 0.5s ease;
+}
+.stagger.visible > *:nth-child(1){transition-delay:0.05s}
+.stagger.visible > *:nth-child(2){transition-delay:0.1s}
+.stagger.visible > *:nth-child(3){transition-delay:0.15s}
+.stagger.visible > *:nth-child(4){transition-delay:0.2s}
+.stagger.visible > *:nth-child(5){transition-delay:0.25s}
+.stagger.visible > *:nth-child(6){transition-delay:0.3s}
+.stagger.visible > *:nth-child(7){transition-delay:0.35s}
+.stagger.visible > *:nth-child(8){transition-delay:0.4s}
+.stagger.visible > *:nth-child(9){transition-delay:0.45s}
+.stagger.visible > *:nth-child(10){transition-delay:0.5s}
+.stagger.visible > *{opacity:1;transform:translateY(0)}
+
+/* keyword map */
+.keyword-map{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:12px;margin:16px 0;
+}
+.keyword-chip{
+  background:var(--surface2);border-radius:12px;
+  padding:14px;text-align:center;
+  border:1px solid rgba(255,255,255,0.06);
+  transition:all 0.3s;cursor:default;
+}
+.keyword-chip:hover{
+  border-color:rgba(255,255,255,0.15);
+  transform:translateY(-3px);
+}
+.keyword-chip .emoji{font-size:1.5rem;display:block;margin-bottom:6px}
+.keyword-chip .kw-name{font-weight:800;font-size:0.85rem;color:var(--accent2)}
+.keyword-chip .kw-desc{font-size:0.75rem;color:var(--text-dim);margin-top:4px}
+
+/* Trophy animation */
+.trophy{
+  font-size:3rem;
+  animation:trophyBounce 1s ease-in-out infinite;
+  display:inline-block;
+}
+@keyframes trophyBounce{
+  0%,100%{transform:translateY(0) rotate(0deg)}
+  25%{transform:translateY(-8px) rotate(-5deg)}
+  75%{transform:translateY(-8px) rotate(5deg)}
+}
+
+footer{
+  text-align:center;padding:40px 20px;
+  color:var(--text-dim);font-size:0.85rem;
+  border-top:1px solid rgba(255,255,255,0.05);
+  margin-top:40px;
+}
+footer a{color:var(--accent);text-decoration:none}
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-orbs">
+  <div class="orb"></div>
+  <div class="orb"></div>
+  <div class="orb"></div>
+</div>
+
+<div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+
+<nav class="nav-dots" id="navDots">
+  <div class="nav-dot active" data-label="Início" onclick="scrollToSection(0)"></div>
+  <div class="nav-dot" data-label="Entendendo" onclick="scrollToSection(1)"></div>
+  <div class="nav-dot" data-label="Menu" onclick="scrollToSection(2)"></div>
+  <div class="nav-dot" data-label="Loop" onclick="scrollToSection(3)"></div>
+  <div class="nav-dot" data-label="Lista" onclick="scrollToSection(4)"></div>
+  <div class="nav-dot" data-label="Resultado" onclick="scrollToSection(5)"></div>
+  <div class="nav-dot" data-label="Completo" onclick="scrollToSection(6)"></div>
+  <div class="nav-dot" data-label="Demo" onclick="scrollToSection(7)"></div>
+</nav>
+
+<div class="container">
+
+  <!-- HERO -->
+  <section class="hero" id="sec-0">
+    <span class="hero-emoji">🎬</span>
+    <div class="hero-badge">Desafio Prático #1</div>
+    <h1>Sistema de Votação<br>de Filme</h1>
+    <p class="subtitle">Um guia passo a passo para construir seu primeiro programa completo em Python — usando variáveis, listas, loops, condicionais e funções.</p>
+  </section>
+
+  <div class="section-connector"><div class="line"></div></div>
+
+  <!-- STEP 1: Understanding the problem -->
+  <section class="step-section" id="sec-1">
+    <div class="step-header">
+      <div class="step-number s1">1</div>
+      <div>
+        <div class="step-title">Entendendo o Problema</div>
+        <div style="color:var(--text-dim);font-size:0.9rem">Antes de codar, vamos pensar!</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p style="font-size:1.05rem;margin-bottom:20px">Imagine que você organiza uma sessão de cinema. Seus amigos precisam votar em qual filme assistir. Você precisa de um <strong style="color:var(--accent2)">sistema</strong> que:</p>
+
+      <div class="keyword-map stagger" id="keywordMap">
+        <div class="keyword-chip">
+          <span class="emoji">📋</span>
+          <span class="kw-name">Mostra opções</span>
+          <span class="kw-desc">Menu com 3 filmes</span>
+        </div>
+        <div class="keyword-chip">
+          <span class="emoji">🔄</span>
+          <span class="kw-name">Repete</span>
+          <span class="kw-desc">Várias pessoas votam</span>
+        </div>
+        <div class="keyword-chip">
+          <span class="emoji">📦</span>
+          <span class="kw-name">Guarda votos</span>
+          <span class="kw-desc">Armazena numa lista</span>
+        </div>
+        <div class="keyword-chip">
+          <span class="emoji">🛑</span>
+          <span class="kw-name">Para</span>
+          <span class="kw-desc">Digitar 0 encerra</span>
+        </div>
+        <div class="keyword-chip">
+          <span class="emoji">🏆</span>
+          <span class="kw-name">Resultado</span>
+          <span class="kw-desc">Quem ganhou?</span>
+        </div>
+      </div>
+
+      <div class="analogy" style="margin-top:24px">
+        <div class="analogy-title">Analogia do mundo real</div>
+        <p style="color:var(--text-dim)">É como uma <strong style="color:var(--text)">urna de votação</strong>: você mostra as opções no mural, cada pessoa deposita seu voto na urna (lista), e quando todos votaram, você abre a urna e conta os votos!</p>
+      </div>
+    </div>
+
+    <!-- Flowchart -->
+    <div class="card">
+      <h3 style="margin-bottom:20px;color:var(--accent2)">🗺️ Mapa do Programa</h3>
+      <p style="color:var(--text-dim);margin-bottom:24px;font-size:0.92rem">Antes de escrever código, visualize o fluxo:</p>
+
+      <div class="flow-container stagger" id="flowchart">
+        <div class="flow-box start">
+          <div class="label">Início</div>
+          🎬 Criar lista de votos vazia
+        </div>
+        <div class="flow-arrow"><span class="flow-label">começa o loop ↩️</span></div>
+        <div class="flow-box process">
+          <div class="label">Processo</div>
+          📋 Mostrar menu de filmes
+        </div>
+        <div class="flow-arrow"></div>
+        <div class="flow-box process">
+          <div class="label">Entrada</div>
+          ⌨️ Pedir voto do usuário
+        </div>
+        <div class="flow-arrow"></div>
+        <div class="flow-box decision">
+          <div class="label">Decisão</div>
+          Digitou 0?
+        </div>
+        <div class="flow-arrow">
+          <span class="flow-label">Não → voto válido?</span>
+          <span class="flow-label right">Sim ↓</span>
+        </div>
+        <div class="flow-box action">
+          <div class="label">Ação</div>
+          📦 Guardar voto na lista
+        </div>
+        <div class="flow-arrow"><span class="flow-label">volta pro loop 🔄</span></div>
+        <div class="flow-box end">
+          <div class="label">Final</div>
+          🏆 Contar votos e mostrar vencedor
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-connector"><div class="line"></div></div>
+
+  <!-- STEP 2: Function - Menu -->
+  <section class="step-section" id="sec-2">
+    <div class="step-header">
+      <div class="step-number s2">2</div>
+      <div>
+        <div class="step-title">Criando o Menu</div>
+        <div style="color:var(--text-dim);font-size:0.9rem">Uma função para exibir as opções</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="concept">
+        <div class="concept-title">🤔 Por que usar uma função?</div>
+        <p>Imagine que você vai imprimir o menu <strong style="color:var(--text)">toda vez que alguém votar</strong>. Em vez de copiar e colar o mesmo código várias vezes, colocamos dentro de uma <strong style="color:var(--accent5)">função</strong> — assim basta chamar <code style="color:var(--accent5)">mostrar_menu()</code> quando precisar!</p>
+      </div>
+
+      <div class="analogy">
+        <div class="analogy-title">Função = Receita de bolo</div>
+        <p style="color:var(--text-dim)">Você escreve a receita <strong style="color:var(--text)">uma vez</strong>. Toda vez que quer bolo, segue a receita. Não precisa inventar de novo!</p>
+      </div>
+
+      <div class="code-block with-lines">
+        <div class="code-header">
+          <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <span class="filename">votacao.py — Passo 1</span>
+        </div>
+        <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6</div>
+        <pre>
+<span class="kw">def</span> <span class="fn">mostrar_menu</span>():
+    <span class="nb">print</span>(<span class="st">"🎬 Votação de Filme"</span>)
+    <span class="nb">print</span>(<span class="st">"1 - Filme A"</span>)
+    <span class="nb">print</span>(<span class="st">"2 - Filme B"</span>)
+    <span class="nb">print</span>(<span class="st">"3 - Filme C"</span>)
+    <span class="nb">print</span>(<span class="st">"0 - Encerrar"</span>)</pre>
+      </div>
+
+      <div class="tip">
+        <span class="tip-icon">💡</span>
+        <div class="tip-content"><strong>def</strong> é a palavra mágica que cria funções. O nome <code>mostrar_menu</code> é escolhido por nós, e os <strong>parênteses ()</strong> indicam que é uma função. Tudo que está <strong>indentado</strong> (com espaço) abaixo dela faz parte da função.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-connector"><div class="line"></div></div>
+
+  <!-- STEP 3: The Loop -->
+  <section class="step-section" id="sec-3">
+    <div class="step-header">
+      <div class="step-number s3">3</div>
+      <div>
+        <div class="step-title">O Loop Infinito</div>
+        <div style="color:var(--text-dim);font-size:0.9rem">while True — repetir até alguém parar</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="concept">
+        <div class="concept-title">🔄 O que é while True?</div>
+        <p><code style="color:var(--accent5)">while True</code> significa: <strong style="color:var(--text)">"repita para sempre"</strong>. Mas calma! Dentro do loop, usamos <code style="color:var(--accent)">break</code> para escapar quando o usuário digitar <strong>0</strong>.</p>
+      </div>
+
+      <div class="analogy">
+        <div class="analogy-title">Analogia: Porteiro de festa</div>
+        <p style="color:var(--text-dim)">O porteiro fica na porta <strong style="color:var(--text)">o tempo todo</strong> perguntando: "Qual seu voto?". Quando alguém diz <strong style="color:var(--accent)">"0 — chega!"</strong>, ele fecha a porta (break).</p>
+      </div>
+
+      <div class="code-block with-lines">
+        <div class="code-header">
+          <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <span class="filename">votacao.py — Passo 2</span>
+        </div>
+        <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13</div>
+        <pre>
+<span class="var">votos</span> = []  <span class="cm"># Lista vazia — nossa "urna"</span>
+
+<span class="kw">while</span> <span class="bool">True</span>:
+    <span class="fn">mostrar_menu</span>()  <span class="cm"># Chama a função!</span>
+
+    <span class="var">opcao</span> = <span class="nb">int</span>(<span class="nb">input</span>(<span class="st">"Digite seu voto: "</span>))
+
+    <span class="kw">if</span> opcao == <span class="num">0</span>:
+        <span class="kw">break</span>  <span class="cm"># 🛑 Sai do loop!</span>
+    <span class="kw">elif</span> opcao == <span class="num">1</span> <span class="kw">or</span> opcao == <span class="num">2</span> <span class="kw">or</span> opcao == <span class="num">3</span>:
+        votos.<span class="fn">append</span>(opcao)  <span class="cm"># 📦 Guarda na lista</span>
+        <span class="nb">print</span>(<span class="st">"✅ Voto registrado!"</span>)
+    <span class="kw">else</span>:
+        <span class="nb">print</span>(<span class="st">"⚠️ Opção inválida!"</span>)</pre>
+      </div>
+
+      <div class="warning" style="margin-top:16px">
+        <span class="warning-icon">⚠️</span>
+        <div style="color:var(--text-dim);font-size:0.92rem">
+          <strong style="color:var(--accent2)">Cuidado!</strong> Sem o <code>break</code>, o loop roda para sempre e trava o programa! Sempre tenha uma <strong>condição de saída</strong>.
+        </div>
+      </div>
+    </div>
+
+    <!-- Visual: Lista growing -->
+    <div class="card">
+      <h3 style="margin-bottom:12px;color:var(--accent3)">👁️ Visualizando a lista crescendo</h3>
+      <p style="color:var(--text-dim);margin-bottom:16px;font-size:0.92rem">Cada voto é adicionado à lista com <code style="color:var(--accent5)">.append()</code>. Clique para simular:</p>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+        <button class="btn-demo" onclick="addVote(1)" style="background:linear-gradient(135deg,var(--accent),#ff4757);padding:8px 20px;font-size:0.85rem">+ Voto Filme A</button>
+        <button class="btn-demo" onclick="addVote(2)" style="background:linear-gradient(135deg,var(--accent2),#ffb347);padding:8px 20px;font-size:0.85rem">+ Voto Filme B</button>
+        <button class="btn-demo" onclick="addVote(3)" style="background:linear-gradient(135deg,var(--accent3),#00b894);padding:8px 20px;font-size:0.85rem">+ Voto Filme C</button>
+        <button class="btn-demo" onclick="resetVotes()" style="background:var(--surface2);border:1px solid rgba(255,255,255,0.1);padding:8px 20px;font-size:0.85rem">🔄 Limpar</button>
+      </div>
+
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.9rem;margin-bottom:8px;color:var(--text-dim)">votos = </div>
+      <div class="list-viz" id="listViz">
+        <span class="bracket">[</span>
+        <span class="bracket">]</span>
+      </div>
+
+      <div style="margin-top:20px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.9rem;margin-bottom:12px;color:var(--text-dim)">Contagem:</div>
+        <div class="vote-counter">
+          <div class="vote-bar">
+            <div class="vote-bar-label" style="color:var(--accent)">🎬 Filme A</div>
+            <div class="vote-bar-track">
+              <div class="vote-bar-fill f1" id="bar1" style="width:0%"></div>
+            </div>
+            <span id="count1" style="font-weight:800;color:var(--accent)">0</span>
+          </div>
+          <div class="vote-bar">
+            <div class="vote-bar-label" style="color:var(--accent2)">🎬 Filme B</div>
+            <div class="vote-bar-track">
+              <div class="vote-bar-fill f2" id="bar2" style="width:0%"></div>
+            </div>
+            <span id="count2" style="font-weight:800;color:var(--accent2)">0</span>
+          </div>
+          <div class="vote-bar">
+            <div class="vote-bar-label" style="color:var(--accent3)">🎬 Filme C</div>
+            <div class="vote-bar-track">
+              <div class="vote-bar-fill f3" id="bar3" style="width:0%"></div>
+            </div>
+            <span id="count3" style="font-weight:800;color:var(--accent3)">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-connector"><div class="line"></div></div>
+
+  <!-- STEP 4: List -->
+  <section class="step-section" id="sec-4">
+    <div class="step-header">
+      <div class="step-number s4">4</div>
+      <div>
+        <div class="step-title">Guardando os Votos</div>
+        <div style="color:var(--text-dim);font-size:0.9rem">Listas — a memória do programa</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="concept">
+        <div class="concept-title">📦 O que é uma Lista?</div>
+        <p>Uma lista em Python é como uma <strong style="color:var(--text)">caixa mágica</strong> que guarda vários valores em sequência. Criamos com <code style="color:var(--accent5)">[]</code> e adicionamos itens com <code style="color:var(--accent5)">.append()</code>.</p>
+      </div>
+
+      <div class="analogy">
+        <div class="analogy-title">Lista = Caderno de anotações</div>
+        <p style="color:var(--text-dim)">Cada página é uma posição. Quando alguém vota, você <strong style="color:var(--text)">escreve na próxima página disponível</strong>. No final, você folheia e conta!</p>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <span class="filename">Entendendo a lista</span>
+        </div>
+        <pre>
+<span class="cm"># Criando lista vazia</span>
+<span class="var">votos</span> = []
+
+<span class="cm"># Alguém vota no Filme A (opção 1)</span>
+votos.<span class="fn">append</span>(<span class="num">1</span>)    <span class="cm"># votos = [1]</span>
+
+<span class="cm"># Outra pessoa vota no Filme C (opção 3)</span>
+votos.<span class="fn">append</span>(<span class="num">3</span>)    <span class="cm"># votos = [1, 3]</span>
+
+<span class="cm"># Mais uma pessoa vota no Filme A (opção 1)</span>
+votos.<span class="fn">append</span>(<span class="num">1</span>)    <span class="cm"># votos = [1, 3, 1]</span>
+
+<span class="cm"># Contando votos do Filme A:</span>
+votos.<span class="fn">count</span>(<span class="num">1</span>)     <span class="cm"># Resultado: 2 ✨</span></pre>
+      </div>
+
+      <div class="tip">
+        <span class="tip-icon">🔑</span>
+        <div class="tip-content">
+          <strong>.append(valor)</strong> = adicionar no final da lista<br>
+          <strong>.count(valor)</strong> = contar quantas vezes aparece<br>
+          São dois dos <strong>métodos de lista</strong> mais usados em Python!
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-connector"><div class="line"></div></div>
+
+  <!-- STEP 5: Counting -->
+  <section class="step-section" id="sec-5">
+    <div class="step-header">
+      <div class="step-number s5">5</div>
+      <div>
+        <div class="step-title">Contando e Decidindo</div>
+        <div style="color:var(--text-dim);font-size:0.9rem">Quem ganhou? if/elif/else decide!</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="concept">
+        <div class="concept-title">🏆 A lógica da contagem</div>
+        <p>Depois que a votação encerra, precisamos: <strong style="color:var(--text)">1)</strong> contar os votos de cada filme e <strong style="color:var(--text)">2)</strong> comparar quem tem mais. Usamos <code style="color:var(--accent5)">.count()</code> para contar e <code style="color:var(--accent5)">if/elif/else</code> para comparar.</p>
+      </div>
+
+      <div class="code-block with-lines">
+        <div class="code-header">
+          <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <span class="filename">votacao.py — Passo 3</span>
+        </div>
+        <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11</div>
+        <pre>
+<span class="cm"># Contando votos de cada filme</span>
+<span class="var">v1</span> = votos.<span class="fn">count</span>(<span class="num">1</span>)  <span class="cm"># Quantos votaram 1?</span>
+<span class="var">v2</span> = votos.<span class="fn">count</span>(<span class="num">2</span>)  <span class="cm"># Quantos votaram 2?</span>
+<span class="var">v3</span> = votos.<span class="fn">count</span>(<span class="num">3</span>)  <span class="cm"># Quantos votaram 3?</span>
+
+<span class="cm"># Quem ganhou?</span>
+<span class="kw">if</span> v1 >= v2 <span class="kw">and</span> v1 >= v3:
+    <span class="nb">print</span>(<span class="st">f"Filme A ganhou com {v1} voto(s)!"</span>)
+<span class="kw">elif</span> v2 >= v1 <span class="kw">and</span> v2 >= v3:
+    <span class="nb">print</span>(<span class="st">f"Filme B ganhou com {v2} voto(s)!"</span>)
+<span class="kw">else</span>:
+    <span class="nb">print</span>(<span class="st">f"Filme C ganhou com {v3} voto(s)!"</span>)</pre>
+      </div>
+
+      <div class="analogy">
+        <div class="analogy-title">Lendo o código em português</div>
+        <p style="color:var(--text-dim)">
+          <strong style="color:var(--accent5)">SE</strong> o Filme A tem mais (ou igual) votos que B <strong style="color:var(--accent5)">E</strong> mais que C → A ganhou!<br>
+          <strong style="color:var(--accent5)">SENÃO SE</strong> B tem mais que A <strong style="color:var(--accent5)">E</strong> mais que C → B ganhou!<br>
+          <strong style="color:var(--accent5)">SENÃO</strong> → sobrou C, então C ganhou!
+        </p>
+      </div>
+
+      <div class="tip">
+        <span class="tip-icon">✨</span>
+        <div class="tip-content">
+          O <strong>f"..."</strong> é uma <strong>f-string</strong> — permite colocar variáveis dentro do texto usando <code>{chaves}</code>. É como um template que o Python preenche automaticamente!
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-connector"><div class="line"></div></div>
+
+  <!-- STEP 6: Complete code -->
+  <section class="step-section" id="sec-6">
+    <div class="step-header">
+      <div class="step-number s6">6</div>
+      <div>
+        <div class="step-title">Código Completo</div>
+        <div style="color:var(--text-dim);font-size:0.9rem">Tudo junto e funcionando!</div>
+      </div>
+    </div>
+
+    <div class="card complete-code">
+      <div class="pulse-badge" style="margin-bottom:16px">
+        <span class="dot"></span>
+        Código final — pronto para rodar
+      </div>
+
+      <button class="copy-btn" onclick="copyCode()">📋 Copiar</button>
+
+      <div class="code-block with-lines" id="finalCode">
+        <div class="code-header">
+          <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <span class="filename">votacao.py — Versão Completa ✅</span>
+        </div>
+        <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15<br>16<br>17<br>18<br>19<br>20<br>21<br>22<br>23<br>24<br>25<br>26<br>27<br>28<br>29<br>30<br>31<br>32</div>
+        <pre id="codeContent">
+<span class="cm"># 🎬 Sistema de Votação de Filme</span>
+<span class="cm"># Desafio 1 — Programa AI</span>
+
+<span class="kw">def</span> <span class="fn">mostrar_menu</span>():
+    <span class="nb">print</span>(<span class="st">"🎬 Votação de Filme"</span>)
+    <span class="nb">print</span>(<span class="st">"1 - Filme A"</span>)
+    <span class="nb">print</span>(<span class="st">"2 - Filme B"</span>)
+    <span class="nb">print</span>(<span class="st">"3 - Filme C"</span>)
+    <span class="nb">print</span>(<span class="st">"0 - Encerrar"</span>)
+
+<span class="var">votos</span> = []  <span class="cm"># Lista vazia — nossa urna</span>
+
+<span class="kw">while</span> <span class="bool">True</span>:
+    <span class="fn">mostrar_menu</span>()
+    <span class="var">opcao</span> = <span class="nb">int</span>(<span class="nb">input</span>(<span class="st">"Digite seu voto: "</span>))
+
+    <span class="kw">if</span> opcao == <span class="num">0</span>:
+        <span class="kw">break</span>
+    <span class="kw">elif</span> opcao == <span class="num">1</span> <span class="kw">or</span> opcao == <span class="num">2</span> <span class="kw">or</span> opcao == <span class="num">3</span>:
+        votos.<span class="fn">append</span>(opcao)
+        <span class="nb">print</span>(<span class="st">"✅ Voto registrado!"</span>)
+    <span class="kw">else</span>:
+        <span class="nb">print</span>(<span class="st">"⚠️ Opção inválida!"</span>)
+
+<span class="cm"># Contagem final</span>
+<span class="var">v1</span> = votos.<span class="fn">count</span>(<span class="num">1</span>)
+<span class="var">v2</span> = votos.<span class="fn">count</span>(<span class="num">2</span>)
+<span class="var">v3</span> = votos.<span class="fn">count</span>(<span class="num">3</span>)
+
+<span class="kw">if</span> v1 >= v2 <span class="kw">and</span> v1 >= v3:
+    <span class="nb">print</span>(<span class="st">f"🏆 Filme A ganhou com {v1} voto(s)!"</span>)
+<span class="kw">elif</span> v2 >= v1 <span class="kw">and</span> v2 >= v3:
+    <span class="nb">print</span>(<span class="st">f"🏆 Filme B ganhou com {v2} voto(s)!"</span>)
+<span class="kw">else</span>:
+    <span class="nb">print</span>(<span class="st">f"🏆 Filme C ganhou com {v3} voto(s)!"</span>)</pre>
+      </div>
+
+      <!-- Togglers for concepts recap -->
+      <div class="toggler">
+        <div class="toggler-header" onclick="toggleSection(this)">
+          <span>📦 O que cada conceito faz aqui?</span>
+          <span class="toggler-arrow">▼</span>
+        </div>
+        <div class="toggler-body">
+          <div style="display:grid;gap:12px;margin-top:8px">
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <span style="background:var(--accent5);color:var(--bg);padding:2px 10px;border-radius:6px;font-weight:800;font-size:0.8rem;flex-shrink:0">FUNÇÃO</span>
+              <span style="color:var(--text-dim);font-size:0.9rem"><code>mostrar_menu()</code> — organiza e reutiliza código</span>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <span style="background:var(--accent3);color:var(--bg);padding:2px 10px;border-radius:6px;font-weight:800;font-size:0.8rem;flex-shrink:0">LISTA</span>
+              <span style="color:var(--text-dim);font-size:0.9rem"><code>votos = []</code> — armazena todos os votos</span>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <span style="background:var(--accent4);color:var(--bg);padding:2px 10px;border-radius:6px;font-weight:800;font-size:0.8rem;flex-shrink:0">LOOP</span>
+              <span style="color:var(--text-dim);font-size:0.9rem"><code>while True</code> + <code>break</code> — repete até digitar 0</span>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <span style="background:var(--accent2);color:var(--bg);padding:2px 10px;border-radius:6px;font-weight:800;font-size:0.8rem;flex-shrink:0">CONDICIONAL</span>
+              <span style="color:var(--text-dim);font-size:0.9rem"><code>if/elif/else</code> — decide o que fazer com cada voto</span>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <span style="background:var(--accent);color:var(--bg);padding:2px 10px;border-radius:6px;font-weight:800;font-size:0.8rem;flex-shrink:0">VARIÁVEIS</span>
+              <span style="color:var(--text-dim);font-size:0.9rem"><code>opcao</code>, <code>v1</code>, <code>v2</code>, <code>v3</code> — guardam dados temporários</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-connector"><div class="line"></div></div>
+
+  <!-- STEP 7: Live Demo -->
+  <section class="step-section" id="sec-7">
+    <div class="step-header">
+      <div class="step-number s3">▶</div>
+      <div>
+        <div class="step-title">Veja Funcionando!</div>
+        <div style="color:var(--text-dim);font-size:0.9rem">Simulação animada do programa</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p style="color:var(--text-dim);margin-bottom:16px;font-size:0.95rem">Veja como o programa roda passo a passo no terminal:</p>
+      <button class="btn-demo" onclick="runDemo()" id="demoBtn">▶️ Rodar Simulação</button>
+
+      <div class="demo-terminal">
+        <div class="term-header">
+          <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <span>python votacao.py</span>
+        </div>
+        <div class="demo-body" id="demoBody">
+          <div style="color:var(--text-dim);font-style:italic">Clique em "Rodar Simulação" para ver o programa em ação...</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-connector"><div class="line"></div></div>
+
+  <!-- Final -->
+  <section class="final-section step-section" id="sec-8">
+    <div class="trophy">🏆</div>
+    <h2>Desafio Concluído!</h2>
+    <p style="color:var(--text-dim);max-width:500px;margin:12px auto 24px;font-size:1.05rem">
+      Você aprendeu a combinar <strong style="color:var(--accent2)">funções</strong>, <strong style="color:var(--accent3)">listas</strong>, <strong style="color:var(--accent4)">loops</strong> e <strong style="color:var(--accent5)">condicionais</strong> num programa completo. Agora é sua vez de criar!
+    </p>
+
+    <div class="card" style="text-align:left;max-width:500px;margin:0 auto">
+      <h3 style="margin-bottom:12px;color:var(--accent2)">🚀 Desafios extras</h3>
+      <div style="color:var(--text-dim);font-size:0.92rem;display:flex;flex-direction:column;gap:10px">
+        <div>✦ Troque os nomes "Filme A/B/C" por filmes reais</div>
+        <div>✦ Mostre o percentual de votos de cada filme</div>
+        <div>✦ Trate o empate como caso especial</div>
+        <div>✦ Mostre a quantidade total de votos no final</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Feito com 💙 para os alunos da <a href="#">Programa AI</a> — João Pessoa, PB
+  </footer>
+</div>
+
+<script>
+// Scroll progress
+window.addEventListener('scroll',()=>{
+  const h=document.documentElement;
+  const pct=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100;
+  document.getElementById('progressBar').style.width=pct+'%';
+});
+
+// Section reveal on scroll
+const sections=document.querySelectorAll('.step-section');
+const staggerEls=document.querySelectorAll('.stagger');
+const observer=new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      e.target.classList.add('visible');
+    }
+  });
+},{threshold:0.15});
+sections.forEach(s=>observer.observe(s));
+staggerEls.forEach(s=>observer.observe(s));
+
+// Nav dots
+const navDots=document.querySelectorAll('.nav-dot');
+const sectionEls=document.querySelectorAll('[id^="sec-"]');
+const dotObserver=new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      const idx=Array.from(sectionEls).indexOf(e.target);
+      navDots.forEach((d,i)=>d.classList.toggle('active',i===idx));
+    }
+  });
+},{threshold:0.3,rootMargin:'-20% 0px'});
+sectionEls.forEach(s=>dotObserver.observe(s));
+
+function scrollToSection(i){
+  sectionEls[i]?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// Interactive vote list
+let voteList=[];
+function addVote(n){
+  if(voteList.length>=12)return;
+  voteList.push(n);
+  renderVotes();
+}
+function resetVotes(){
+  voteList=[];
+  renderVotes();
+}
+function renderVotes(){
+  const viz=document.getElementById('listViz');
+  const filmNames={1:'1',2:'2',3:'3'};
+  const filmClasses={1:'film1',2:'film2',3:'film3'};
+  let html='<span class="bracket">[</span>';
+  voteList.forEach((v,i)=>{
+    if(i>0)html+='<span class="comma">,</span> ';
+    html+=`<span class="item ${filmClasses[v]}" style="animation-delay:${i*0.05}s">${filmNames[v]}</span>`;
+  });
+  html+='<span class="bracket">]</span>';
+  viz.innerHTML=html;
+
+  const c1=voteList.filter(v=>v===1).length;
+  const c2=voteList.filter(v=>v===2).length;
+  const c3=voteList.filter(v=>v===3).length;
+  const max=Math.max(c1,c2,c3,1);
+
+  document.getElementById('count1').textContent=c1;
+  document.getElementById('count2').textContent=c2;
+  document.getElementById('count3').textContent=c3;
+  document.getElementById('bar1').style.width=(c1/max*100)+'%';
+  document.getElementById('bar2').style.width=(c2/max*100)+'%';
+  document.getElementById('bar3').style.width=(c3/max*100)+'%';
+  document.getElementById('bar1').textContent=c1>0?c1:'';
+  document.getElementById('bar2').textContent=c2>0?c2:'';
+  document.getElementById('bar3').textContent=c3>0?c3:'';
+}
+
+// Demo simulation
+let demoRunning=false;
+async function runDemo(){
+  if(demoRunning)return;
+  demoRunning=true;
+  const btn=document.getElementById('demoBtn');
+  btn.style.opacity='0.5';btn.style.pointerEvents='none';
+  const body=document.getElementById('demoBody');
+  body.innerHTML='';
+
+  const lines=[
+    {text:'🎬 Votação de Filme',cls:'output',delay:300},
+    {text:'1 - Filme A',cls:'output',delay:200},
+    {text:'2 - Filme B',cls:'output',delay:200},
+    {text:'3 - Filme C',cls:'output',delay:200},
+    {text:'0 - Encerrar',cls:'output',delay:200},
+    {text:'Digite seu voto: <span class="user-input">1</span>',cls:'prompt',delay:800},
+    {text:'✅ Voto registrado!',cls:'success',delay:500},
+    {text:'',cls:'',delay:300},
+    {text:'🎬 Votação de Filme',cls:'output',delay:300},
+    {text:'1 - Filme A',cls:'output',delay:150},
+    {text:'2 - Filme B',cls:'output',delay:150},
+    {text:'3 - Filme C',cls:'output',delay:150},
+    {text:'0 - Encerrar',cls:'output',delay:150},
+    {text:'Digite seu voto: <span class="user-input">3</span>',cls:'prompt',delay:800},
+    {text:'✅ Voto registrado!',cls:'success',delay:500},
+    {text:'',cls:'',delay:300},
+    {text:'🎬 Votação de Filme',cls:'output',delay:300},
+    {text:'1 - Filme A',cls:'output',delay:150},
+    {text:'2 - Filme B',cls:'output',delay:150},
+    {text:'3 - Filme C',cls:'output',delay:150},
+    {text:'0 - Encerrar',cls:'output',delay:150},
+    {text:'Digite seu voto: <span class="user-input">1</span>',cls:'prompt',delay:800},
+    {text:'✅ Voto registrado!',cls:'success',delay:500},
+    {text:'',cls:'',delay:300},
+    {text:'🎬 Votação de Filme',cls:'output',delay:300},
+    {text:'1 - Filme A',cls:'output',delay:150},
+    {text:'2 - Filme B',cls:'output',delay:150},
+    {text:'3 - Filme C',cls:'output',delay:150},
+    {text:'0 - Encerrar',cls:'output',delay:150},
+    {text:'Digite seu voto: <span class="user-input">0</span>',cls:'prompt',delay:1000},
+    {text:'',cls:'',delay:500},
+    {text:'🏆 Filme A ganhou com 2 voto(s)!',cls:'result',delay:0},
+  ];
+
+  for(const line of lines){
+    await new Promise(r=>setTimeout(r,line.delay));
+    const div=document.createElement('div');
+    div.className='demo-line';
+    div.innerHTML=`<span class="${line.cls}">${line.text}</span>`;
+    body.appendChild(div);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>div.classList.add('show')));
+    body.scrollTop=body.scrollHeight;
+  }
+
+  btn.style.opacity='1';btn.style.pointerEvents='auto';
+  btn.textContent='🔄 Rodar de Novo';
+  demoRunning=false;
+}
+
+// Toggler
+function toggleSection(header){
+  header.classList.toggle('open');
+  header.nextElementSibling.classList.toggle('open');
+}
+
+// Copy code
+function copyCode(){
+  const code=`# 🎬 Sistema de Votação de Filme
+# Desafio 1 — Programa AI
+
+def mostrar_menu():
+    print("🎬 Votação de Filme")
+    print("1 - Filme A")
+    print("2 - Filme B")
+    print("3 - Filme C")
+    print("0 - Encerrar")
+
+votos = []
+
+while True:
+    mostrar_menu()
+    opcao = int(input("Digite seu voto: "))
+
+    if opcao == 0:
+        break
+    elif opcao == 1 or opcao == 2 or opcao == 3:
+        votos.append(opcao)
+        print("✅ Voto registrado!")
+    else:
+        print("⚠️ Opção inválida!")
+
+v1 = votos.count(1)
+v2 = votos.count(2)
+v3 = votos.count(3)
+
+if v1 >= v2 and v1 >= v3:
+    print(f"🏆 Filme A ganhou com {v1} voto(s)!")
+elif v2 >= v1 and v2 >= v3:
+    print(f"🏆 Filme B ganhou com {v2} voto(s)!")
+else:
+    print(f"🏆 Filme C ganhou com {v3} voto(s)!")`;
+  navigator.clipboard.writeText(code).then(()=>{
+    const btn=document.querySelector('.copy-btn');
+    btn.textContent='✅ Copiado!';
+    setTimeout(()=>btn.textContent='📋 Copiar',2000);
+  });
+}
+</script>
+</body>
+</html>
